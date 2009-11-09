@@ -596,6 +596,14 @@ bool IsPositiveEffect(uint32 spellId, uint32 effIndex)
                 case SPELL_AURA_ADD_FLAT_MODIFIER:          // mods
                 case SPELL_AURA_ADD_PCT_MODIFIER:
                 {
+                    switch(spellproto->Id)
+                    {
+                        case 36032:                         // Arcane Blast
+                        case 37441:                         // T5 Tirisfal Regalia 2nd bonus
+                            return true;
+                        default:
+                            break;
+                    }                
                     // non-positive mods
                     switch(spellproto->EffectMiscValue[effIndex])
                     {

@@ -8349,6 +8349,9 @@ uint32 Unit::SpellDamageBonus(Unit *pVictim, SpellEntry const *spellProto, uint3
                     }
                 }
             }
+            // every arcane school spell but Arcane Blast and Arcane Missile
+            if (spellProto->SchoolMask & SPELL_SCHOOL_MASK_ARCANE && !(spellProto->SpellFamilyFlags & UI64LIT(0x000020200000)))
+                RemoveAurasDueToSpell(36032);            
             break;
         }
         case SPELLFAMILY_WARLOCK:
