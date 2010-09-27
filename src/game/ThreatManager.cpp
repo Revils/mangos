@@ -30,11 +30,11 @@
 //==============================================================
 
 // The pHatingUnit is not used yet
-float ThreatCalcHelper::calcThreat(Unit* pHatedUnit, Unit* /*pHatingUnit*/, float pThreat, bool crit, SpellSchoolMask schoolMask, SpellEntry const *pThreatSpell)
+uint32 ThreatCalcHelper::calcThreat(Unit* pHatedUnit, Unit* /*pHatingUnit*/, uint32 pThreat, bool crit, SpellSchoolMask schoolMask, SpellEntry const *pThreatSpell)
 {
     // all flat mods applied early
     if(!pThreat)
-        return 0.0f;
+        return 0;
 
     if (pThreatSpell)
     {
@@ -42,10 +42,10 @@ float ThreatCalcHelper::calcThreat(Unit* pHatedUnit, Unit* /*pHatingUnit*/, floa
             modOwner->ApplySpellMod(pThreatSpell->Id, SPELLMOD_THREAT, pThreat);
 
         if(crit)
-            pThreat *= pHatedUnit->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRITICAL_THREAT,schoolMask);
+            pThreat = uint32(pThreat*pHatedUnit->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRITICAL_THREAT,schoolMask));
     }
 
-    float threat = pHatedUnit->ApplyTotalThreatModifier(pThreat, schoolMask);
+    uint32 threat = uint32(pHatedUnit->ApplyTotalThreatModifier(pThreat, schoolMask));
     return threat;
 }
 
@@ -53,10 +53,10 @@ float ThreatCalcHelper::calcThreat(Unit* pHatedUnit, Unit* /*pHatingUnit*/, floa
 //================= HostileReference ==========================
 //============================================================
 
-HostileReference::HostileReference(Unit* pUnit, ThreatManager *pThreatManager, float pThreat)
+HostileReference::HostileReference(Unit* pUnit, ThreatManager *pThreatManager, uint32 pThreat)
 {
     iThreat = pThreat;
-    iTempThreatModifyer = 0.0f;
+    iTempThreatModifyer = 0;
     link(pUnit, pThreatManager);
     iUnitGuid = pUnit->GetGUID();
     iOnline = true;
@@ -96,14 +96,20 @@ void HostileReference::fireStatusChanged(ThreatRefStatusChangeEvent& pThreatRefS
 
 //============================================================
 
-void HostileReference::addThreat(float pMod)
+void HostileReference::addThreat(int32 pMod)
 {
-    iThreat += pMod;
+    if (iThreat + pMod > 0)
+        iThreat += pMod;
+    else
+    {
+        pMod = iThreat;
+        iThreat = 0;
+    }
     // the threat is changed. Source and target unit have to be availabe
     // if the link was cut before relink it again
     if(!isOnline())
         updateOnlineStatus();
-    if(pMod != 0.0f)
+    if(pMod != 0)
     {
         ThreatRefStatusChangeEvent event(UEV_THREAT_REF_THREAT_CHANGE, this, pMod);
         fireStatusChanged(event);
@@ -113,7 +119,7 @@ void HostileReference::addThreat(float pMod)
     {
         Unit* victim_owner = getTarget()->GetOwner();
         if(victim_owner && victim_owner->isAlive())
-            getSource()->addThreat(victim_owner, 0.0f);     // create a threat to the owner of a pet, if the pet attacks
+            getSource()->addThreat(victim_owner, 0);     // create a threat to the owner of a pet, if the pet attacks
     }
 }
 
@@ -237,7 +243,7 @@ HostileReference* ThreatContainer::getReferenceByTarget(Unit* pVictim)
 //============================================================
 // Add the threat, if we find the reference
 
-HostileReference* ThreatContainer::addThreat(Unit* pVictim, float pThreat)
+HostileReference* ThreatContainer::addThreat(Unit* pVictim, int32 pThreat)
 {
     HostileReference* ref = getReferenceByTarget(pVictim);
     if(ref)
@@ -369,7 +375,7 @@ void ThreatManager::clearReferences()
 
 //============================================================
 
-void ThreatManager::addThreat(Unit* pVictim, float pThreat, bool crit, SpellSchoolMask schoolMask, SpellEntry const *pThreatSpell)
+void ThreatManager::addThreat(Unit* pVictim, int32 sThreat, bool crit, SpellSchoolMask schoolMask, SpellEntry const *pThreatSpell)
 {
     //function deals with adding threat and adding players and pets into ThreatList
     //mobs, NPCs, guards have ThreatList and HateOfflineList
@@ -390,9 +396,9 @@ void ThreatManager::addThreat(Unit* pVictim, float pThreat, bool crit, SpellScho
 
     MANGOS_ASSERT(getOwner()->GetTypeId()== TYPEID_UNIT);
 
-    float threat = ThreatCalcHelper::calcThreat(pVictim, iOwner, pThreat, crit, schoolMask, pThreatSpell);
+    uint32 threat = ThreatCalcHelper::calcThreat(pVictim, iOwner, sThreat, crit, schoolMask, pThreatSpell);
 
-    if (threat > 0.0f)
+    if (threat > 0)
     {
         if (float redirectedMod = pVictim->getHostileRefManager().GetThreatRedirectionMod())
         {
@@ -400,8 +406,14 @@ void ThreatManager::addThreat(Unit* pVictim, float pThreat, bool crit, SpellScho
             {
                 if (redirectedTarget != getOwner() && redirectedTarget->isAlive())
                 {
-                    float redirectedThreat = threat * redirectedMod;
-                    threat -= redirectedThreat;
+                    uint32 redirectedThreat = uint32(threat * redirectedMod);
+                    if (threat - redirectedThreat > 0)
+                        threat -= redirectedThreat;
+                    else
+                    {
+                        redirectedThreat = threat;
+                        threat = 0;
+                    }
                     addThreatDirectly(redirectedTarget, redirectedThreat);
                 }
             }
@@ -411,7 +423,7 @@ void ThreatManager::addThreat(Unit* pVictim, float pThreat, bool crit, SpellScho
     addThreatDirectly(pVictim, threat);
 }
 
-void ThreatManager::addThreatDirectly(Unit* pVictim, float threat)
+void ThreatManager::addThreatDirectly(Unit* pVictim, int32 threat)
 {
     HostileReference* ref = iThreatContainer.addThreat(pVictim, threat);
     // Ref is online
@@ -455,7 +467,7 @@ Unit* ThreatManager::getHostileTarget()
 
 float ThreatManager::getThreat(Unit *pVictim, bool pAlsoSearchOfflineList)
 {
-    float threat = 0.0f;
+    uint32 threat = 0;
     HostileReference* ref = iThreatContainer.getReferenceByTarget(pVictim);
     if(!ref && pAlsoSearchOfflineList)
         ref = iThreatOfflineContainer.getReferenceByTarget(pVictim);
@@ -473,7 +485,7 @@ void ThreatManager::tauntApply(Unit* pTaunter)
         if(getCurrentVictim() && (ref->getThreat() < getCurrentVictim()->getThreat()))
         {
             // Ok, temp threat is unused
-            if(ref->getTempThreatModifyer() == 0.0f)
+            if(ref->getTempThreatModifyer() == 0)
             {
                 ref->setTempThreat(getCurrentVictim()->getThreat());
                 iUpdateNeed = true;
@@ -521,8 +533,8 @@ void ThreatManager::processThreatEvent(ThreatRefStatusChangeEvent* threatRefStat
     switch(threatRefStatusChangeEvent->getType())
     {
         case UEV_THREAT_REF_THREAT_CHANGE:
-            if((getCurrentVictim() == hostileReference && threatRefStatusChangeEvent->getFValue()<0.0f) ||
-                (getCurrentVictim() != hostileReference && threatRefStatusChangeEvent->getFValue()>0.0f))
+            if((getCurrentVictim() == hostileReference && threatRefStatusChangeEvent->getIValue()<0) ||
+                (getCurrentVictim() != hostileReference && threatRefStatusChangeEvent->getIValue()>0))
                 setDirty(true);                             // the order in the threat list might have changed
             break;
         case UEV_THREAT_REF_ONLINE_STATUS:

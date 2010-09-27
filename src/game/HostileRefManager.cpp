@@ -38,7 +38,7 @@ HostileRefManager::~HostileRefManager()
 // The pVictim is hated than by them as well
 // use for buffs and healing threat functionality
 
-void HostileRefManager::threatAssist(Unit *pVictim, float pThreat, SpellEntry const *pThreatSpell, bool pSingleTarget)
+void HostileRefManager::threatAssist(Unit *pVictim, int32 pThreat, SpellEntry const *pThreatSpell, bool pSingleTarget)
 {
     float redirectedMod = pVictim->getHostileRefManager().GetThreatRedirectionMod();
     Unit* redirectedTarget = redirectedMod ? pVictim->getHostileRefManager().GetThreatRedirectionTarget() : NULL;
@@ -47,26 +47,26 @@ void HostileRefManager::threatAssist(Unit *pVictim, float pThreat, SpellEntry co
     HostileReference* ref = getFirst();
     while(ref != NULL)
     {
-        float threat = ThreatCalcHelper::calcThreat(pVictim, iOwner, pThreat, false, (pThreatSpell ? GetSpellSchoolMask(pThreatSpell) : SPELL_SCHOOL_MASK_NORMAL), pThreatSpell);
+        uint32 threat = ThreatCalcHelper::calcThreat(pVictim, iOwner, pThreat, false, (pThreatSpell ? GetSpellSchoolMask(pThreatSpell) : SPELL_SCHOOL_MASK_NORMAL), pThreatSpell);
 
-        if (threat > 0.0f)
+        if (threat > 0)
         {
             if (redirectedTarget && redirectedTarget != ref->getTarget() && redirectedTarget->isAlive())
             {
-                float redirectedThreat = threat * redirectedMod;
+                int32 redirectedThreat = int32(threat * redirectedMod);
                 threat -= redirectedThreat;
 
                 if(redirectedTarget == getOwner())          // It is faster to modify the threat durectly if possible
-                    ref->addThreat(float (threat) / size);
+                    ref->addThreat(int32(threat/size));
                 else
                     ref->getSource()->addThreat(redirectedTarget, redirectedThreat);
             }
         }
 
         if (pVictim == getOwner())
-            ref->addThreat(float (threat) / size);          // It is faster to modify the threat durectly if possible
+            ref->addThreat(int32(threat/size));          // It is faster to modify the threat durectly if possible
         else
-            ref->getSource()->addThreat(pVictim, float (threat) / size);
+            ref->getSource()->addThreat(pVictim, int32(threat/size));
 
         ref = ref->next();
     }

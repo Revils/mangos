@@ -82,7 +82,7 @@ class MANGOS_DLL_SPEC ThreatRefStatusChangeEvent : public UnitBaseEvent
         HostileReference* iHostileReference;
         union
         {
-            float iFValue;
+            //float iFValue;
             int32 iIValue;
             bool iBValue;
         };
@@ -92,13 +92,13 @@ class MANGOS_DLL_SPEC ThreatRefStatusChangeEvent : public UnitBaseEvent
 
         ThreatRefStatusChangeEvent(uint32 pType, HostileReference* pHostileReference) : UnitBaseEvent(pType) { iHostileReference = pHostileReference; }
 
-        ThreatRefStatusChangeEvent(uint32 pType, HostileReference* pHostileReference, float pValue) : UnitBaseEvent(pType) { iHostileReference = pHostileReference; iFValue = pValue; }
+        ThreatRefStatusChangeEvent(uint32 pType, HostileReference* pHostileReference, int32 pValue) : UnitBaseEvent(pType) { iHostileReference = pHostileReference; iIValue = pValue; }
 
         ThreatRefStatusChangeEvent(uint32 pType, HostileReference* pHostileReference, bool pValue) : UnitBaseEvent(pType) { iHostileReference = pHostileReference; iBValue = pValue; }
 
         int32 getIValue() const { return iIValue; }
 
-        float getFValue() const { return iFValue; }
+        //float getFValue() const { return iFValue; }
 
         bool getBValue() const { return iBValue; }
 

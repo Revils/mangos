@@ -1940,7 +1940,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         // FIX_ME: this is 2.0.12 threat effect replaced in 2.1.x by dummy aura, must be checked for correctness
                         if (target->CanHaveThreatList())
                             if (Unit* caster = GetCaster())
-                                target->AddThreat(caster, 10.0f, false, GetSpellSchoolMask(GetSpellProto()), GetSpellProto());
+                                target->AddThreat(caster, 10, false, GetSpellSchoolMask(GetSpellProto()), GetSpellProto());
                         return;
                     case 7057:                              // Haunting Spirits
                         // expected to tick with 30 sec period (tick part see in Aura::PeriodicTick)
@@ -4207,7 +4207,7 @@ void Aura::HandleAuraModTotalThreat(bool apply, bool Real)
     if (!caster || !caster->isAlive())
         return;
 
-    float threatMod = apply ? float(m_modifier.m_amount) : float(-m_modifier.m_amount);
+    int32 threatMod = apply ? m_modifier.m_amount : -m_modifier.m_amount;
 
     target->getHostileRefManager().threatAssist(caster, threatMod, GetSpellProto());
 }
@@ -6691,7 +6691,7 @@ void Aura::PeriodicTick()
             pCaster->CalculateHealAbsorb(heal, &absorbHeal);
 
             int32 gain = pCaster->DealHeal(pCaster, heal - absorbHeal, spellProto, false, absorbHeal);
-            pCaster->getHostileRefManager().threatAssist(pCaster, gain * 0.5f, spellProto);
+            pCaster->getHostileRefManager().threatAssist(pCaster, int32(gain * 0.5f), spellProto);
             break;
         }
         case SPELL_AURA_PERIODIC_HEAL:
@@ -6764,7 +6764,7 @@ void Aura::PeriodicTick()
                 if( BattleGround *bg = ((Player*)pCaster)->GetBattleGround() )
                     bg->UpdatePlayerScore(((Player*)pCaster), SCORE_HEALING_DONE, gain);
 
-            target->getHostileRefManager().threatAssist(pCaster, float(gain) * 0.5f, spellProto);
+            target->getHostileRefManager().threatAssist(pCaster, int32(gain * 0.5f), spellProto);
 
             // heal for caster damage
             if(target != pCaster && spellProto->SpellVisual[0] == 163)
@@ -6870,7 +6870,7 @@ void Aura::PeriodicTick()
             if(gain_amount)
             {
                 int32 gain = pCaster->ModifyPower(power, gain_amount);
-                target->AddThreat(pCaster, float(gain) * 0.5f, pInfo.critical, GetSpellSchoolMask(spellProto), spellProto);
+                target->AddThreat(pCaster, int32(gain * 0.5f), pInfo.critical, GetSpellSchoolMask(spellProto), spellProto);
             }
             break;
         }
@@ -6900,7 +6900,7 @@ void Aura::PeriodicTick()
             int32 gain = target->ModifyPower(power,pdamage);
 
             if(Unit* pCaster = GetCaster())
-                target->getHostileRefManager().threatAssist(pCaster, float(gain) * 0.5f, spellProto);
+                target->getHostileRefManager().threatAssist(pCaster, int32(gain * 0.5f), spellProto);
             break;
         }
         case SPELL_AURA_OBS_MOD_MANA:
@@ -6926,7 +6926,7 @@ void Aura::PeriodicTick()
             int32 gain = target->ModifyPower(POWER_MANA, pdamage);
 
             if(Unit* pCaster = GetCaster())
-                target->getHostileRefManager().threatAssist(pCaster, float(gain) * 0.5f, spellProto);
+                target->getHostileRefManager().threatAssist(pCaster, int32(gain * 0.5f), spellProto);
             break;
         }
         case SPELL_AURA_POWER_BURN_MANA:
@@ -6988,7 +6988,7 @@ void Aura::PeriodicTick()
 
             int32 gain = target->ModifyHealth(m_modifier.m_amount);
             if (Unit *caster = GetCaster())
-                target->getHostileRefManager().threatAssist(caster, float(gain) * 0.5f, spellProto);
+                target->getHostileRefManager().threatAssist(caster, int32(gain * 0.5f), spellProto);
             break;
         }
         case SPELL_AURA_MOD_POWER_REGEN:
